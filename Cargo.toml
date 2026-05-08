@@ -1,0 +1,9 @@
+[workspace]
+resolver = "3"
+members = ["engine", "vision", "script", "ghost"]
+
+[workspace.dependencies]
+clap = { version = "4.6.1", features = ["derive", "env"] }
+thiserror = { version = "2.0.18" }
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3.23" }
