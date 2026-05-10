@@ -7,6 +7,10 @@ mod engine;
 mod error;
 mod opts;
 mod utils;
+mod scraper;
+mod site;
+mod limiter;
+mod config;
 
 fn main() {
     let opts = Opts::parse();
