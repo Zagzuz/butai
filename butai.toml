@@ -1,2 +1,3 @@
 [[sites]]
-url = "https://google.com"
+url = "https://google.com/"
+hints.has_public_api = "found"

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use slotmap::{SecondaryMap, SlotMap, new_key_type};
 use tokio::sync::RwLock;
 use url::Url;
@@ -12,6 +12,33 @@ new_key_type! {
 pub struct Config {
     pub sites: SlotMap<SiteKey, Url>,
     pub hints: RwLock<SecondaryMap<SiteKey, SiteHints>>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct RawSite {
+    url: Url,
+    #[serde(default)]
+    hints: SiteHints,
+}
+
+impl Config {
+    pub async fn snapshot(&self) -> toml::Table {
+        let hints = self.hints.read().await;
+        let sites: toml::Value = self
+            .sites
+            .iter()
+            .map(|(key, url)| {
+                toml::Value::try_from(RawSite {
+                    url: url.clone(),
+                    hints: hints[key].clone(),
+                })
+                .unwrap()
+            })
+            .collect::<Vec<_>>()
+            .into();
+
+        toml::map::Map::from_iter([("sites".to_string(), sites)])
+    }
 }
 
 impl<'de> Deserialize<'de> for Config {

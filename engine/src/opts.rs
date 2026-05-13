@@ -1,5 +1,5 @@
-use std::num::NonZeroUsize;
-use std::time::Duration;
+use std::{num::NonZeroUsize, time::Duration};
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -13,7 +13,8 @@ pub(super) struct Opts {
 }
 
 fn parse_interval(s: &str) -> Result<Duration, String> {
-    let duration: Duration = s.parse::<humantime::Duration>()
+    let duration: Duration = s
+        .parse::<humantime::Duration>()
         .map_err(|e| e.to_string())?
         .into();
 

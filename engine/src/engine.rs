@@ -115,22 +115,17 @@ impl Worker {
         let mut hints = self.config.hints.read().await[self.key];
 
         if hints.has_public_api.is_unknown() {
-            hints.has_public_api = SiteHint::Detected(todo!("check"));
+            hints.has_public_api = todo!("check");
             updated = true;
         }
 
         if hints.has_hidden_api.is_unknown() {
-            hints.has_hidden_api = SiteHint::Detected(todo!("check"));
-            updated = true;
-        }
-
-        if hints.requires_auth.is_unknown() {
-            hints.requires_auth = SiteHint::Detected(todo!("check"));
+            hints.has_hidden_api = todo!("check");
             updated = true;
         }
 
         if hints.has_js_rendering.is_unknown() {
-            hints.has_js_rendering = SiteHint::Detected(todo!("check"));
+            hints.has_js_rendering = todo!("check");
             updated = true;
         }
 
