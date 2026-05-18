@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["engine", "vision", "script", "ghost"]
+members = ["engine", "vision", "common", "scraper"]
 
 [workspace.dependencies]
 clap = { version = "4.6.1", features = ["derive", "env"] }

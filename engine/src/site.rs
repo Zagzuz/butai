@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

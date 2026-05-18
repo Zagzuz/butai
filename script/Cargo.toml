@@ -1,7 +1,0 @@
-[package]
-name = "script"
-version = "0.1.0"
-edition = "2024"
-description = "Butai HTML web scraper"
-
-[dependencies]

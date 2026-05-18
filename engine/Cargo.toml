@@ -5,12 +5,14 @@ edition = "2024"
 description = "Butai scraping control engine"
 
 [dependencies]
+common = { path = "../common", features = ["scraper"] }
+scraper = { path = "../scraper", features = ["html", "grpc", "api"] }
+
 clap.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
-enum_dispatch = { version = "0.3.13" }
 futures = { version = "0.3.23" }
 humantime = { version = "2.3.0" }
 serde = { version = "1.0.208", features = ["derive"] }

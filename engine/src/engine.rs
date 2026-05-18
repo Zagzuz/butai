@@ -12,7 +12,6 @@ use crate::{
     consts::VERSION,
     error::Error,
     opts::Opts,
-    site::SiteHint,
     utils,
 };
 
@@ -35,6 +34,8 @@ impl Engine {
             .map_err(Error::InvalidConfig)?,
         );
         info!("Configuration loaded, {} websites in total", config.sites.len());
+
+        // TODO: serve metrics
 
         loop {
             info!("Butai Engine started");
