@@ -3,7 +3,9 @@ use url::Url;
 
 #[derive(Debug, Copy, Clone)]
 pub enum ScrapeResult {
+    Ok,
     Unsupported,
+    Error,
 }
 
 impl ScrapeResult {

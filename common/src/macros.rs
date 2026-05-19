@@ -6,6 +6,8 @@ pub use url::Url;
 #[macro_export]
 macro_rules! define_scrapers {
     ($($ty:ty => $url:literal),* $(,)?) => {
+        pub type ScraperMap = std::collections::HashMap<Url, AnyScraper>;
+
         paste! {
             $(
                 static [<$ty:snake:upper _URL>]: std::sync::LazyLock<Url> =
@@ -53,6 +55,10 @@ macro_rules! define_scrapers {
                         _ => $crate::scraper::ScrapeResult::unsupported(),
                     }
                 }
+            }
+
+            pub fn build_scrapers() -> ScraperMap {
+                [$(([<$ty:snake:upper _URL>].clone(), AnyScraper::[<$ty>]($ty)),)*].into()
             }
         }
     }

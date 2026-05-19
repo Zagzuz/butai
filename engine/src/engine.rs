@@ -1,17 +1,19 @@
 use std::{sync::Arc, time::Duration};
 
+use common::scraper::{ApiScraper, HtmlScraper, JsScraper, ScrapeResult};
 use futures::{StreamExt, stream::FuturesUnordered};
 use tokio::{
     select,
     time::{MissedTickBehavior, interval},
 };
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     config::{Config, SiteKey},
     consts::VERSION,
     error::Error,
     opts::Opts,
+    scraper::{ScraperMap, build_scrapers},
     site::ScraperKind,
     utils,
 };
@@ -36,6 +38,8 @@ impl Engine {
         );
         info!("Configuration loaded, {} websites in total", config.sites.len());
 
+        let scrapers = Arc::new(build_scrapers());
+
         // TODO: serve metrics
 
         loop {
@@ -47,7 +51,7 @@ impl Engine {
                     info!("Engine got a shutdown signal");
                     break Ok(());
                 }
-                ret = Self::analyze(opts.interval, config.clone()) => {
+                ret = Self::analyze(opts.interval, config.clone(), scrapers.clone()) => {
                     error!(?ret, "Engine analyzer finished unexpectedly");
                     break Ok(());
                 }
@@ -55,7 +59,7 @@ impl Engine {
         }
     }
 
-    async fn analyze(scrape_interval: Duration, config: Arc<Config>) {
+    async fn analyze(scrape_interval: Duration, config: Arc<Config>, scrapers: Arc<ScraperMap>) {
         let mut i = interval(scrape_interval);
         i.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
@@ -69,6 +73,7 @@ impl Engine {
                     Worker {
                         key: token,
                         config: config.clone(),
+                        scrapers: scrapers.clone(),
                     }
                     .run()
                 })
@@ -87,55 +92,57 @@ impl Engine {
 struct Worker {
     key: SiteKey,
     config: Arc<Config>,
+    scrapers: Arc<ScraperMap>,
 }
 
 impl Worker {
     async fn run(self) {
-        //1. Surface analysis
-        //    └─ check headers, meta tags, JS script tags in initial HTML
-        //
-        // 2. Assign initial scraper kind from hints
-        //
-        // 3. Scrape attempt
-        //    └─ success → done
-        //    └─ failure/incomplete → escalate kind, update hints, retry
-        //
-        // 4. Watcher picks up persistent failures
-        //    └─ triggers re-analysis with heavier scraper if needed
-        //
         // TODO: Deescalate after 1000 stable scrapes
-        // TODO: Full hint reset after 10 consecutive failures
-        // TODO: Unfeasible hints should be corrected by scrapers.
 
-        let mut updated = false;
+        let url = &self.config.sites[self.key];
+        let Some(scraper) = self.scrapers.get(url) else {
+            // FIXME: error
+            return;
+        };
         let mut hints = self.config.hints.read().await[self.key];
+        let mut kind = hints.scraper.unwrap_or(ScraperKind::Ghost);
 
         loop {
-            match hints.scraper {
-                None => {
-                    hints.scraper.replace(ScraperKind::Ghost);
-                    continue;
+            let scrape_result = match kind {
+                ScraperKind::Ghost => scraper.scrape_api(url).await,
+                ScraperKind::Script => scraper.scrape_html(url).await,
+                ScraperKind::Scout => scraper.scrape_js(url).await,
+            };
+
+            match scrape_result {
+                ScrapeResult::Ok => {
+                    hints.scraper.replace(kind);
+                    hints.stable_count += 1;
+                    break;
                 }
-                Some(ScraperKind::Ghost) => {}
-                Some(ScraperKind::Script) => {}
-                Some(ScraperKind::Scout) => {}
+                ScrapeResult::Unsupported => {
+                    if !kind.elevate() {
+                        warn!(?url, "No scraper implementations found, skipping...");
+                        hints.stable_count = 0;
+                        break;
+                    }
+                }
+                ScrapeResult::Error => {
+                    error!(?url, ?kind, "Scraper failed");
+                    hints.stable_count = 0;
+                    if !kind.elevate() {
+                        error!(?url, "All scrapers failed, skipping...");
+                        // TODO: Universal scraper fallback
+                        break;
+                    }
+                }
             }
         }
 
-        if updated {
-            if self
-                .config
-                .hints
-                .write()
-                .await
-                .insert(self.key, hints)
-                .is_none()
-            {
-                error!("Hints update failed! Key was removed from the originating slot map.");
-            }
-            // TODO: persist config
-        }
-
-        todo!("scrape")
+        self.config.hints.write().await.insert(self.key, hints);
+        // TODO: persist config
+        /*if let Err(err) = tokio::fs::write(CONFIG_PATH, self.config.snapshot()).await {
+            error!(?err, "Config update failed!");
+        }*/
     }
 }
