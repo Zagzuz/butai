@@ -1,9 +1,9 @@
 use common::{
     define_scrapers,
-    macros::{async_trait, paste},
+    macros::{Url, async_trait, paste},
 };
 use scraper::site::ExampleSite;
 
 define_scrapers! {
-    Example => ExampleSite,
+    ExampleSite => "https://example.com",
 }

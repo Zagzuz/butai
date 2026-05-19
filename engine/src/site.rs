@@ -1,27 +1,30 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum SiteHint {
-    #[default]
-    Unknown,
-    Found,
-    #[serde(alias = "not found")]
-    NotFound,
-    Unfeasible,
+pub enum ScraperKind {
+    Ghost,
+    Scout,
+    Script,
 }
 
-impl SiteHint {
-    pub fn is_unknown(&self) -> bool {
-        matches!(self, Self::Unknown)
+impl ScraperKind {
+    pub fn elevate(&mut self) -> bool {
+        *self = match self {
+            ScraperKind::Ghost => ScraperKind::Script,
+            ScraperKind::Scout => return false,
+            ScraperKind::Script => ScraperKind::Scout,
+        };
+
+        true
     }
 }
 
-#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Default, Copy, Clone, Deserialize, Serialize)]
 pub struct SiteHints {
-    pub has_public_api: SiteHint,
-    pub has_hidden_api: SiteHint,
-    pub has_js_rendering: SiteHint,
+    pub scraper: Option<ScraperKind>,
+    #[serde(default)]
+    pub stable_count: u32,
 }
 
 #[cfg(test)]
@@ -39,9 +42,8 @@ mod tests {
         let table = toml! {
             [[sites]]
             url = url
-            hints.has_public_api = "found"
-            hints.has_hidden_api = "not_found"
-            hints.has_js_rendering = "unfeasible"
+            hints.scraper = "ghost"
+            hints.stable_count = 1
         };
         let deserializer = table.clone().into_deserializer();
         let config = Config::deserialize(deserializer).unwrap();

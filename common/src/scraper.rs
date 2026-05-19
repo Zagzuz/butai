@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use url::Url;
 
 #[derive(Debug, Copy, Clone)]
 pub enum ScrapeResult {
@@ -13,21 +14,21 @@ impl ScrapeResult {
 
 #[async_trait]
 pub trait HtmlScraper {
-    async fn scrape_html(&self) -> ScrapeResult {
+    async fn scrape_html(&self, _: &Url) -> ScrapeResult {
         ScrapeResult::unsupported()
     }
 }
 
 #[async_trait]
 pub trait JsScraper {
-    async fn scrape_js(&self) -> ScrapeResult {
+    async fn scrape_js(&self, _: &Url) -> ScrapeResult {
         ScrapeResult::unsupported()
     }
 }
 
 #[async_trait]
 pub trait ApiScraper {
-    async fn scrape_api(&self) -> ScrapeResult {
+    async fn scrape_api(&self, _: &Url) -> ScrapeResult {
         ScrapeResult::unsupported()
     }
 }

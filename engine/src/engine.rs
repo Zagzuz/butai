@@ -12,6 +12,7 @@ use crate::{
     consts::VERSION,
     error::Error,
     opts::Opts,
+    site::ScraperKind,
     utils,
 };
 
@@ -106,28 +107,19 @@ impl Worker {
         // TODO: Full hint reset after 10 consecutive failures
         // TODO: Unfeasible hints should be corrected by scrapers.
 
-        self.update_hints().await;
-
-        todo!("scrape")
-    }
-
-    async fn update_hints(&self) {
         let mut updated = false;
         let mut hints = self.config.hints.read().await[self.key];
 
-        if hints.has_public_api.is_unknown() {
-            hints.has_public_api = todo!("check");
-            updated = true;
-        }
-
-        if hints.has_hidden_api.is_unknown() {
-            hints.has_hidden_api = todo!("check");
-            updated = true;
-        }
-
-        if hints.has_js_rendering.is_unknown() {
-            hints.has_js_rendering = todo!("check");
-            updated = true;
+        loop {
+            match hints.scraper {
+                None => {
+                    hints.scraper.replace(ScraperKind::Ghost);
+                    continue;
+                }
+                Some(ScraperKind::Ghost) => {}
+                Some(ScraperKind::Script) => {}
+                Some(ScraperKind::Scout) => {}
+            }
         }
 
         if updated {
@@ -143,5 +135,7 @@ impl Worker {
             }
             // TODO: persist config
         }
+
+        todo!("scrape")
     }
 }
