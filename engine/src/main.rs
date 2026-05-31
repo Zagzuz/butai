@@ -11,15 +11,19 @@ mod scraper;
 mod site;
 mod limiter;
 mod config;
+mod log;
 
 fn main() {
     let opts = Opts::parse();
+    opts.log.init().unwrap();
+
     let mut builder = tokio::runtime::Builder::new_multi_thread();
     if let Some(workers) = opts.workers {
         builder.worker_threads(workers.get());
     }
     builder
         .enable_io()
+        .enable_time()
         .build()
         .expect("runtime failure")
         .block_on(Engine::start(opts))

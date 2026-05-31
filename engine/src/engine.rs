@@ -2,18 +2,19 @@ use std::{sync::Arc, time::Duration};
 
 use common::scraper::{ApiScraper, HtmlScraper, JsScraper, ScrapeResult};
 use futures::{StreamExt, stream::FuturesUnordered};
+use humantime::format_duration;
 use tokio::{
     select,
     time::{MissedTickBehavior, interval},
 };
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     config::{Config, SiteKey},
     consts::VERSION,
     error::Error,
     opts::Opts,
-    scraper::{ScraperMap, build_scrapers},
+    scraper::{self, ScraperMap},
     site::ScraperKind,
     utils,
 };
@@ -38,7 +39,7 @@ impl Engine {
         );
         info!("Configuration loaded, {} websites in total", config.sites.len());
 
-        let scrapers = Arc::new(build_scrapers());
+        let scrapers = Arc::new(scraper::build_scrapers());
 
         // TODO: serve metrics
 
@@ -65,6 +66,7 @@ impl Engine {
 
         loop {
             i.tick().await;
+            info!("Scraping initiated");
 
             let mut workers = config
                 .sites
@@ -85,6 +87,11 @@ impl Engine {
                     None => break,
                 }
             }
+
+            info!(
+                "Scraping finished, sleeping for {}...",
+                format_duration(scrape_interval)
+            );
         }
     }
 }
@@ -101,13 +108,15 @@ impl Worker {
 
         let url = &self.config.sites[self.key];
         let Some(scraper) = self.scrapers.get(url) else {
-            // FIXME: error
+            // TODO: Universal scraper fallback
+            warn!(%url, "Unsupported website, skipping...");
             return;
         };
         let mut hints = self.config.hints.read().await[self.key];
         let mut kind = hints.scraper.unwrap_or(ScraperKind::Ghost);
 
         loop {
+            debug!(%url, ?kind, ?hints, "Attempting scraping...");
             let scrape_result = match kind {
                 ScraperKind::Ghost => scraper.scrape_api(url).await,
                 ScraperKind::Script => scraper.scrape_html(url).await,
@@ -118,20 +127,22 @@ impl Worker {
                 ScrapeResult::Ok => {
                     hints.scraper.replace(kind);
                     hints.stable_count += 1;
+                    debug!(%url, ?kind, "Scraping succeeded");
                     break;
                 }
                 ScrapeResult::Unsupported => {
                     if !kind.elevate() {
-                        warn!(?url, "No scraper implementations found, skipping...");
+                        warn!(%url, "No scraper implementations found, skipping...");
                         hints.stable_count = 0;
+                        // TODO: Universal scraper fallback
                         break;
                     }
                 }
                 ScrapeResult::Error => {
-                    error!(?url, ?kind, "Scraper failed");
+                    error!(%url, ?kind, "Scraper failed");
                     hints.stable_count = 0;
                     if !kind.elevate() {
-                        error!(?url, "All scrapers failed, skipping...");
+                        error!(%url, "All scrapers failed, skipping...");
                         // TODO: Universal scraper fallback
                         break;
                     }

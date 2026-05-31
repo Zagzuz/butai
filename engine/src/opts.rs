@@ -1,9 +1,14 @@
 use std::{num::NonZeroUsize, time::Duration};
 
 use clap::Parser;
+use crate::log::LogOpts;
 
 #[derive(Parser, Debug)]
 pub(super) struct Opts {
+    /// Logging
+    #[clap(flatten)]
+    pub(super) log: LogOpts,
+
     /// Number of workers
     #[arg(short, long, env = "BUTAI_ENGINE_WORKERS")]
     pub(super) workers: Option<NonZeroUsize>,
