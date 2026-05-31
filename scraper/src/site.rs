@@ -1,1 +1,1 @@
-pub struct ExampleSite;
+pub struct OrixTheater;

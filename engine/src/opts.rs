@@ -1,13 +1,17 @@
 use std::{num::NonZeroUsize, time::Duration};
 
 use clap::Parser;
-use crate::log::LogOpts;
+
+use crate::{browser::BrowserOpts, log::LogOpts};
 
 #[derive(Parser, Debug)]
 pub(super) struct Opts {
     /// Logging
     #[clap(flatten)]
     pub(super) log: LogOpts,
+    /// Browser
+    #[clap(flatten)]
+    pub(super) browser: BrowserOpts,
 
     /// Number of workers
     #[arg(short, long, env = "BUTAI_ENGINE_WORKERS")]

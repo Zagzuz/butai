@@ -12,6 +12,7 @@ mod site;
 mod limiter;
 mod config;
 mod log;
+mod browser;
 
 fn main() {
     let opts = Opts::parse();

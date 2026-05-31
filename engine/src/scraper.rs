@@ -1,9 +1,9 @@
 use common::{
     define_scrapers,
-    macros::{Url, async_trait, paste},
+    macros::{Url, paste},
 };
-use scraper::site::ExampleSite;
+use scraper::site::OrixTheater;
 
 define_scrapers! {
-    ExampleSite => "https://example.com",
+    OrixTheater => "https://orixtheater.jp",
 }

@@ -6,6 +6,8 @@ pub use url::Url;
 #[macro_export]
 macro_rules! define_scrapers {
     ($($ty:ty => $url:literal),* $(,)?) => {
+        use common::scraper::{HtmlScraper, JsScraper, ApiScraper};
+
         pub type ScraperMap = std::collections::HashMap<Url, AnyScraper>;
 
         paste! {
@@ -18,39 +20,36 @@ macro_rules! define_scrapers {
                 $([<$ty>]($ty),)*
             }
 
-            #[async_trait]
-            impl $crate::scraper::HtmlScraper for AnyScraper {
-                async fn scrape_html(&self, url: &Url) -> $crate::scraper::ScrapeResult
+            impl AnyScraper {
+                pub async fn scrape_html(
+                    &self,
+                    url: &Url,
+                    browser: $crate::scraper::SharedBrowser
+                ) -> $crate::scraper::ScrapeResult
                 {
                     match self {
                         $(Self::[<$ty>](s) if url == &*[<$ty:snake:upper _URL>] => {
-                            s.scrape_html(url).await
+                            s.scrape_html(browser).await
                         },)*
                         _ => $crate::scraper::ScrapeResult::unsupported(),
                     }
                 }
-            }
 
-            #[async_trait]
-            impl $crate::scraper::JsScraper for AnyScraper {
-                async fn scrape_js(&self, url: &Url) -> $crate::scraper::ScrapeResult
+                pub async fn scrape_js(&self, url: &Url) -> $crate::scraper::ScrapeResult
                 {
                     match self {
                         $(Self::[<$ty>](s) if url == &*[<$ty:snake:upper _URL>] => {
-                            s.scrape_js(url).await
+                            s.scrape_js().await
                         },)*
                         _ => $crate::scraper::ScrapeResult::unsupported(),
                     }
                 }
-            }
 
-            #[async_trait]
-            impl $crate::scraper::ApiScraper for AnyScraper {
-                async fn scrape_api(&self, url: &Url) -> $crate::scraper::ScrapeResult
+                pub async fn scrape_api(&self, url: &Url) -> $crate::scraper::ScrapeResult
                 {
                     match self {
                         $(Self::[<$ty>](s) if url == &*[<$ty:snake:upper _URL>] => {
-                            s.scrape_api(url).await
+                            s.scrape_api().await
                         },)*
                         _ => $crate::scraper::ScrapeResult::unsupported(),
                     }

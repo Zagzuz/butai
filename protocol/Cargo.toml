@@ -1,0 +1,31 @@
+[package]
+name = "butai-protocol"
+description = "Butai Protocol"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+scout-client = [
+    "tonic/transport",
+    "tonic-prost",
+    "tonic-prost-build",
+    "prost",
+    "prost-types",
+]
+scout-server = [
+    "tonic",
+    "tonic-prost",
+    "tonic-prost-build",
+    "prost",
+    "prost-types",
+]
+
+[dependencies]
+prost = { workspace = true, optional = true }
+prost-types = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+tonic = { workspace = true, optional = true, features = ["codegen"] }
+tonic-prost = { workspace = true, optional = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true, optional = true }

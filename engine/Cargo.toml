@@ -9,13 +9,14 @@ common = { path = "../common", features = ["scraper"] }
 scraper = { path = "../scraper", features = ["html", "grpc", "api"] }
 
 clap.workspace = true
+serde.workspace = true
+chromiumoxide.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
 futures = { version = "0.3.23" }
 humantime = { version = "2.3.0" }
-serde = { version = "1.0.208", features = ["derive"] }
 slotmap = { version = "1.1.1", features = ["serde"] }
 tokio = { version = "1.52.1", features = ["net", "rt-multi-thread", "signal", "time", "macros", "fs"] }
 tokio-util = { version = "0.7.18", default-features = false }

@@ -1,5 +1,5 @@
 use common::scraper::ApiScraper;
 
-use crate::site::ExampleSite;
+use crate::site::OrixTheater;
 
-impl ApiScraper for ExampleSite {}
+impl ApiScraper for OrixTheater {}

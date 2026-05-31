@@ -1,5 +1,5 @@
 use common::scraper::JsScraper;
 
-use crate::site::ExampleSite;
+use crate::site::OrixTheater;
 
-impl JsScraper for ExampleSite {}
+impl JsScraper for OrixTheater {}

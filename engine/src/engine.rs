@@ -1,6 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
-use common::scraper::{ApiScraper, HtmlScraper, JsScraper, ScrapeResult};
+use chromiumoxide::Browser;
+use common::scraper::{ScrapeResult, SharedBrowser};
 use futures::{StreamExt, stream::FuturesUnordered};
 use humantime::format_duration;
 use tokio::{
@@ -10,6 +11,7 @@ use tokio::{
 use tracing::{debug, error, info, warn};
 
 use crate::{
+    browser::BrowserHandle,
     config::{Config, SiteKey},
     consts::VERSION,
     error::Error,
@@ -20,7 +22,7 @@ use crate::{
 };
 
 // TODO: move to opts
-const CONFIG_PATH: &'static str = "butai.toml";
+const CONFIG_PATH: &str = "butai.toml";
 
 pub(super) struct Engine;
 
@@ -40,27 +42,50 @@ impl Engine {
         info!("Configuration loaded, {} websites in total", config.sites.len());
 
         let scrapers = Arc::new(scraper::build_scrapers());
+        let mut browser_handle = BrowserHandle::new(opts.browser).await?;
 
         // TODO: serve metrics
 
-        loop {
+        'l: {
             info!("Butai Engine started");
 
             select! {
                 biased;
                 _ = utils::shutdown_signal() => {
                     info!("Engine got a shutdown signal");
-                    break Ok(());
+                    break 'l;
                 }
-                ret = Self::analyze(opts.interval, config.clone(), scrapers.clone()) => {
+                ret = Self::analyze(
+                    opts.interval,
+                    config.clone(),
+                    scrapers.clone(),
+                    browser_handle.browser()
+                ) => {
                     error!(?ret, "Engine analyzer finished unexpectedly");
-                    break Ok(());
+                    break 'l;
+                }
+                ret = browser_handle.watch() => {
+                    match ret {
+                        Ok(()) => error!("Browser event task finished unexpectedly"),
+                        Err(err) => error!(?err, "Browser event task failed"),
+                    }
+                    // TODO: recovery + backoff
+                    break 'l;
                 }
             }
         }
+
+        browser_handle.cancel().await;
+
+        Ok(())
     }
 
-    async fn analyze(scrape_interval: Duration, config: Arc<Config>, scrapers: Arc<ScraperMap>) {
+    async fn analyze(
+        scrape_interval: Duration,
+        config: Arc<Config>,
+        scrapers: Arc<ScraperMap>,
+        browser: SharedBrowser,
+    ) {
         let mut i = interval(scrape_interval);
         i.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
@@ -76,17 +101,13 @@ impl Engine {
                         key: token,
                         config: config.clone(),
                         scrapers: scrapers.clone(),
+                        browser: browser.clone(),
                     }
                     .run()
                 })
                 .collect::<FuturesUnordered<_>>();
 
-            loop {
-                match workers.next().await {
-                    Some(()) => {}
-                    None => break,
-                }
-            }
+            while let Some(()) = workers.next().await {}
 
             info!(
                 "Scraping finished, sleeping for {}...",
@@ -100,6 +121,7 @@ struct Worker {
     key: SiteKey,
     config: Arc<Config>,
     scrapers: Arc<ScraperMap>,
+    browser: Arc<Browser>,
 }
 
 impl Worker {
@@ -119,7 +141,7 @@ impl Worker {
             debug!(%url, ?kind, ?hints, "Attempting scraping...");
             let scrape_result = match kind {
                 ScraperKind::Ghost => scraper.scrape_api(url).await,
-                ScraperKind::Script => scraper.scrape_html(url).await,
+                ScraperKind::Script => scraper.scrape_html(url, self.browser.clone()).await,
                 ScraperKind::Scout => scraper.scrape_js(url).await,
             };
 
@@ -151,9 +173,10 @@ impl Worker {
         }
 
         self.config.hints.write().await.insert(self.key, hints);
-        // TODO: persist config
-        /*if let Err(err) = tokio::fs::write(CONFIG_PATH, self.config.snapshot()).await {
+        if let Err(err) =
+            tokio::fs::write(CONFIG_PATH, self.config.snapshot().await.to_string()).await
+        {
             error!(?err, "Config update failed!");
-        }*/
+        }
     }
 }

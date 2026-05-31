@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
-use url::Url;
+use chromiumoxide::Browser;
+
+pub type SharedBrowser = Arc<Browser>;
 
 #[derive(Debug, Copy, Clone)]
 pub enum ScrapeResult {
@@ -16,21 +20,21 @@ impl ScrapeResult {
 
 #[async_trait]
 pub trait HtmlScraper {
-    async fn scrape_html(&self, _: &Url) -> ScrapeResult {
+    async fn scrape_html(&self, _: SharedBrowser) -> ScrapeResult {
         ScrapeResult::unsupported()
     }
 }
 
 #[async_trait]
 pub trait JsScraper {
-    async fn scrape_js(&self, _: &Url) -> ScrapeResult {
+    async fn scrape_js(&self) -> ScrapeResult {
         ScrapeResult::unsupported()
     }
 }
 
 #[async_trait]
 pub trait ApiScraper {
-    async fn scrape_api(&self, _: &Url) -> ScrapeResult {
+    async fn scrape_api(&self) -> ScrapeResult {
         ScrapeResult::unsupported()
     }
 }

@@ -30,7 +30,7 @@ impl Config {
             .map(|(key, url)| {
                 toml::Value::try_from(RawSite {
                     url: url.clone(),
-                    hints: hints[key].clone(),
+                    hints: hints[key],
                 })
                 .unwrap()
             })
